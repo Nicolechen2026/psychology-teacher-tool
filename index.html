@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="h-full">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>心理老师工作台</title>
+<link rel="icon" href="data:," />
+<!-- Tailwind CSS 由 CLI 预编译成纯 CSS，不引入任何运行时脚本，app.js 的 fetch / 流式逻辑完全不受影响 -->
+<link rel="stylesheet" href="tailwind.css" />
+</head>
+<body class="antialiased">
+<div class="app min-h-screen">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo shadow-btn bg-gradient-to-br from-brand-600 to-teal-500">心</div>
+      <div>
+        <div class="brand-name">心理老师工作台</div>
+        <div class="brand-sub">2025届 · 1–14班</div>
+      </div>
+    </div>
+    <div class="side-label">工作区</div>
+    <nav id="nav">
+      <button class="nav-item active" data-view="today">
+        <span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18M9 15l2 2 4-4"/></svg></span>今日待办
+      </button>
+      <button class="nav-item" data-view="students">
+        <span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>我的学生
+      </button>
+      <button class="nav-item" data-view="consult">
+        <span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>咨询情况
+      </button>
+      <button class="nav-item" data-view="teaching">
+        <span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h7M9 11h5"/></svg></span>授课情况
+      </button>
+      <button class="nav-item" data-view="crisis">
+        <span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4M12 16h.01"/></svg></span>危机学生沟通记录
+      </button>
+    </nav>
+    <div class="side-foot">
+      <div class="state" id="ollamaState"><span class="dot"></span>检测本机 Ollama…</div>
+      <button class="btn ghost" id="backupBtn">备份全部数据</button>
+      <button class="btn ghost" id="restoreBtn">恢复备份</button>
+      <input type="file" id="restoreFile" accept=".json,application/json" />
+      <div class="tiny" style="margin-top:8px">数据只存在这台电脑的浏览器里，不上传。建议定期备份。</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow tracking-wider">WORKSPACE / 2025届</div>
+        <h1 id="viewTitle">今日待办</h1>
+        <div class="top-meta" id="topMeta"></div>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="top-badge"><span class="dot" style="width:6px;height:6px;border-radius:50%;background:#0d9488;display:inline-block"></span>本地运行 · 数据不上传</span>
+        <div class="today-chip shadow-card ring-1 ring-mist-200" id="todayChip"></div>
+      </div>
+    </header>
+
+    <!-- ① 今日待办 -->
+    <section class="view active" id="view-today">
+      <div class="grid">
+        <div class="card span-2 shadow-card rounded-xl2">
+          <div class="card-head">
+            <h2>今日时间线</h2>
+            <span class="hint" id="timelineHint"></span>
+          </div>
+          <div class="timeline" id="timeline"></div>
+        </div>
+
+        <div class="card shadow-card rounded-xl2">
+          <div class="card-head"><h2>待办事项</h2><span class="hint" id="todoCount"></span></div>
+          <form class="inline-form" id="todoForm">
+            <input type="time" id="todoTime" value="08:00" />
+            <input type="text" id="todoText" placeholder="加一条待办，比如：整理周三团辅材料" required />
+            <button class="btn" type="submit">添加</button>
+          </form>
+          <div class="list" id="todoList"></div>
+        </div>
+
+        <div class="card shadow-card rounded-xl2">
+          <div class="card-head"><h2>今日课程安排</h2><button class="link" data-goto="teaching">管理课表 →</button></div>
+          <div class="list" id="todayLessons"></div>
+        </div>
+
+        <div class="card span-2 shadow-card rounded-xl2">
+          <div class="card-head"><h2>今日咨询安排</h2><button class="link" data-goto="consult">去填写记录 →</button></div>
+          <div class="list" id="todayConsults"></div>
+        </div>
+      </div>
+      <div class="soft-note"><b>提示</b> 时间线自动合并待办、课表与咨询安排；已过时段置灰，前后 30 分钟内高亮为「正在进行」。</div>
+    </section>
+
+    <!-- ② 我的学生 -->
+    <section class="view" id="view-students">
+      <div class="card shadow-card rounded-xl2">
+        <div class="toolbar">
+          <select id="classFilter" style="width:130px"></select>
+          <input type="search" id="studentSearch" placeholder="搜姓名 / 职位" />
+          <span class="spacer"></span>
+          <button class="btn" id="addStudentBtn">+ 添加学生</button>
+          <button class="btn ghost" id="importStudentBtn">Excel 导入</button>
+          <input type="file" id="studentFile" accept=".xlsx,.xls,.csv" />
+          <button class="btn ghost" id="exportStudentBtn">导出 Excel</button>
+          <button class="btn ghost" id="templateBtn">下载模板</button>
+          <button class="btn ghost" id="demoBtn">载入示例数据</button>
+        </div>
+        <div class="stat-row" id="studentStats"></div>
+        <div class="table-wrap">
+          <table class="tbl" id="studentTable">
+            <thead><tr>
+              <th>班级</th><th>姓名</th><th>性别</th><th>职位</th>
+              <th>四六类家庭</th><th>咨询</th><th>危机等级</th><th>操作</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="detail" id="studentDetail" hidden></div>
+      </div>
+      <div class="soft-note"><b>数据联动</b> 咨询次数与危机等级由咨询记录、预警通报自动汇总；点击表格任意一行可展开学生档案。</div>
+    </section>
+
+    <!-- ③ 咨询情况 -->
+    <section class="view" id="view-consult">
+      <div class="card shadow-card rounded-xl2">
+        <div class="card-head"><h2>新增咨询安排</h2><span class="hint">危机等级会同步到「我的学生」</span></div>
+        <form class="form-grid" id="consultForm">
+          <div><label>日期</label><input type="date" id="cDate" required /></div>
+          <div><label>时间</label><input type="time" id="cTime" value="12:30" required /></div>
+          <div><label>学生</label><select id="cStudent"></select></div>
+          <div><label>主题 / 事由</label><input type="text" id="cTopic" placeholder="如：情绪波动随访" /></div>
+          <div><label>危机等级</label><select id="cLevel"></select></div>
+          <div><label>状态</label><select id="cStatus">
+            <option>待进行</option><option>已完成</option><option>已取消</option>
+          </select></div>
+          <div><button class="btn" type="submit">添加安排</button></div>
+        </form>
+      </div>
+
+      <div class="card shadow-card rounded-xl2">
+        <div class="card-head">
+          <h2>咨询安排与记录</h2>
+          <div class="flex items-center gap-2">
+            <button class="btn ghost sm" id="exportConsultBtn">导出 Excel</button>
+            <button class="btn ghost sm" id="importConsultBtn">导入安排</button>
+            <input type="file" id="consultFile" accept=".xlsx,.xls,.csv" />
+          </div>
+        </div>
+        <div class="toolbar">
+          <select id="consultClassFilter" style="width:130px"></select>
+          <select id="consultStatusFilter" style="width:130px">
+            <option value="">全部状态</option><option>待进行</option><option>已完成</option><option>已取消</option>
+          </select>
+          <span class="spacer"></span>
+          <span class="hint" id="consultCount"></span>
+        </div>
+        <div class="list" id="consultList"></div>
+      </div>
+
+      <div class="card shadow-card rounded-xl2" id="recordEditor" hidden>
+        <div class="card-head"><h2 id="recordTitle">填写咨询记录</h2><button class="link" id="closeRecordBtn">收起</button></div>
+        <div class="hint" id="recordTarget" style="margin-bottom:10px"></div>
+        <textarea id="recordText" rows="8" placeholder="把咨询过程、观察、处理与后续安排写在这里；也可以直接上传 txt / md 文本文件。"></textarea>
+        <div class="row">
+          <button class="btn ghost sm" id="pickRecordFileBtn">上传记录文件</button>
+          <input type="file" id="recordFile" accept=".txt,.md,.csv,.json,.log" />
+          <span class="hint" id="recordFileName"></span>
+          <span class="spacer" style="flex:1"></span>
+          <button class="btn" id="saveRecordBtn">保存记录</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ④ 授课情况 -->
+    <section class="view" id="view-teaching">
+      <div class="card shadow-card rounded-xl2">
+        <div class="card-head"><h2>学校教学历</h2><span class="hint" id="weekHint"></span></div>
+        <form class="form-grid" id="calendarForm">
+          <div><label>学期名称</label><input type="text" id="termName" placeholder="如：2026学年第一学期" /></div>
+          <div><label>开学第一周周一</label><input type="date" id="termStart" /></div>
+          <div><label>总周数</label><input type="number" id="termWeeks" min="1" max="30" value="20" /></div>
+          <div><button class="btn" type="submit">保存教学历</button></div>
+        </form>
+        <div class="week-strip" id="weekStrip"></div>
+      </div>
+
+      <div class="card shadow-card rounded-xl2">
+        <div class="card-head"><h2>课表</h2><span class="hint">星期一到星期日，课表会自动出现在「今日待办」</span></div>
+        <div class="toolbar">
+          <button class="btn ghost sm" id="addLessonBtn">+ 手动添加</button>
+          <button class="btn ghost sm" id="importLessonBtn">Excel 导入课表</button>
+          <input type="file" id="lessonFile" accept=".xlsx,.xls,.csv" />
+          <button class="btn ghost sm" id="lessonTemplateBtn">下载模板</button>
+          <button class="btn ghost sm" id="exportLessonBtn">导出课表</button>
+        </div>
+        <div class="table-wrap">
+          <table class="tbl" id="lessonTable">
+            <thead><tr><th>星期</th><th>节次 / 时间</th><th>班级</th><th>课程 / 主题</th><th>操作</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card shadow-card rounded-xl2">
+        <div class="card-head"><h2>授课记录：主题与反馈</h2><button class="btn ghost sm" id="exportTeachLogBtn">导出 Excel</button></div>
+        <form class="form-grid" id="teachLogForm">
+          <div><label>日期</label><input type="date" id="tlDate" required /></div>
+          <div><label>班级</label><select id="tlClass"></select></div>
+          <div><label>授课主题</label><input type="text" id="tlTheme" placeholder="如：考前情绪调节" required /></div>
+          <div><label>课堂反馈</label><input type="text" id="tlFeedback" placeholder="学生反应、需要跟进的地方" /></div>
+          <div><button class="btn" type="submit">保存记录</button></div>
+        </form>
+        <div class="list" id="teachLogList" style="margin-top:14px"></div>
+      </div>
+    </section>
+
+    <!-- ⑤ 危机学生沟通记录 -->
+    <section class="view" id="view-crisis">
+      <div class="grid">
+        <div class="card shadow-card rounded-xl2">
+          <div class="card-head"><h2>咨询摘要</h2><span class="hint">粘贴后生成本地预警通报</span></div>
+          <div class="field">
+            <label for="crisisStudent">关联学生（可选，保存时会归到该生档案）</label>
+            <select id="crisisStudent" style="width:100%"></select>
+          </div>
+          <textarea id="summary" rows="11" placeholder="例：初三女生，PHQ-9 得分 16，近一个月频繁去医务室主诉头痛、胃痛……"></textarea>
+          <div class="row">
+            <button class="btn" id="run">生成预警通报</button>
+            <div class="status" id="status"></div>
+          </div>
+          <div class="tiny" style="margin-top:8px">Ctrl + Enter 也可生成 · 摘要只在本机传给 Ollama</div>
+        </div>
+
+        <div class="card shadow-card rounded-xl2">
+          <div class="card-head"><h2>预警通报</h2><span class="hint" id="meta"></span></div>
+          <div class="result empty" id="result">点「生成预警通报」，内容会逐字显示在这里。</div>
+          <div class="row">
+            <button class="btn ghost sm" id="saveCrisisBtn">保存为学生沟通记录</button>
+            <button class="btn ghost sm" id="copyResultBtn">复制全文</button>
+            <button class="btn ghost sm" id="downloadResultBtn">下载 .txt</button>
+          </div>
+          <details id="diagBox">
+            <summary>连接诊断<span id="diagBrief">检查中…</span></summary>
+            <pre id="diag"></pre>
+          </details>
+        </div>
+
+        <div class="card span-2 shadow-card rounded-xl2">
+          <div class="card-head">
+            <h2>历史沟通记录</h2>
+            <div class="flex items-center gap-2">
+              <button class="btn ghost sm" id="exportCrisisBtn">导出 Excel</button>
+              <button class="btn ghost sm" id="clearCrisisBtn">清空历史</button>
+            </div>
+          </div>
+          <div class="list" id="crisisList"></div>
+        </div>
+      </div>
+      <div class="soft-note"><b>本地生成</b> 由本机 Ollama 的 qwen2.5:3b 逐字输出，摘要不经过任何外部服务。</div>
+    </section>
+
+    <div class="page-foot">心理老师工作台 · 数据保存在本机浏览器，建议定期从侧栏备份</div>
+  </main>
+</div>
+
+<div class="modal-mask" id="modalMask" hidden>
+  <div class="modal">
+    <h2 id="modalTitle">编辑</h2>
+    <div class="form-grid" id="modalBody"></div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="modalCancel">取消</button>
+      <button class="btn" id="modalOk">保存</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="xlsx.full.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
